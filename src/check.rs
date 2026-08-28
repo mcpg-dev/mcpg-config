@@ -31,7 +31,13 @@ const USAGE: &str = "\
 mcpg config check — pre-flight YAML validator for MCPG configuration
 
 USAGE:
-    mcpg config check <config.yaml> [<override.yaml> ...]
+    mcpg config check [--deny-warnings] <config.yaml> [<override.yaml> ...]
+
+OPTIONS:
+    --deny-warnings   Exit 1 on a warning as well as an error. For a gate:
+                      an unreachable trust floor is valid config that serves
+                      nothing, so a run that only checks the exit code would
+                      pass it.
 
 NOTES:
     Multiple files merge in argument order with later-wins semantics
@@ -40,7 +46,7 @@ NOTES:
 
 EXIT CODES:
     0 — config is valid
-    1 — config failed validation
+    1 — config failed validation (or warned, under --deny-warnings)
     2 — usage or I/O error
 ";
 
@@ -51,11 +57,16 @@ pub fn run(args: Vec<String>) -> ExitCode {
         print!("{USAGE}");
         return ExitCode::SUCCESS;
     }
-    if args.is_empty() {
+    let deny_warnings = args.iter().any(|a| a == "--deny-warnings");
+    let paths: Vec<PathBuf> = args
+        .iter()
+        .filter(|a| *a != "--deny-warnings")
+        .map(PathBuf::from)
+        .collect();
+    if paths.is_empty() {
         eprintln!("{USAGE}");
         return ExitCode::from(2);
     }
-    let paths: Vec<PathBuf> = args.iter().map(PathBuf::from).collect();
 
     let mut yamls: Vec<String> = Vec::with_capacity(paths.len());
     for path in &paths {
@@ -101,6 +112,9 @@ pub fn run(args: Vec<String>) -> ExitCode {
                     unreachable.join(", "),
                 );
                 eprintln!("  fix: {}", mcpg::config::trust_ceiling_remedy(ceiling));
+                if deny_warnings {
+                    return ExitCode::from(1);
+                }
             }
             ExitCode::SUCCESS
         }
