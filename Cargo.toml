@@ -1,6 +1,6 @@
 [package]
 name = "mcpg-config"
-version = "0.1.0-beta.21"
+version = "0.1.0-beta.22"
 edition = "2024"
 license = "Apache-2.0"
 description = "Configuration toolchain for the MCP Gateway: generate starter configs from curated deployment shapes, validate against the gateway's real schema, explain effective wiring, scan for inline secrets, and emit the JSON schema. The `mcpg config <sub>` subcommand delegates here."
@@ -9,7 +9,7 @@ description = "Configuration toolchain for the MCP Gateway: generate starter con
 # The gateway AS A LIBRARY: this tool validates and explains against the
 # gateway's real AppConfig — same deserialiser, same deny_unknown_fields —
 # so a config this tool accepts is a config the gateway boots.
-mcpg = { git = "https://github.com/mcpg-dev/mcpg", tag = "v0.1.0-beta.24", version = "=0.1.0-beta.24" }
+mcpg = { git = "https://github.com/mcpg-dev/mcpg", tag = "v0.1.0-beta.26", version = "=0.1.0-beta.26" }
 
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 serde_json = "1"
