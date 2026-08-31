@@ -24,7 +24,7 @@ Installed next to the `mcpg` binary it is also reachable as `mcpg config
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mcpg-dev/source-code/main/install.sh | sh -s -- --bin mcpg-config
+curl -fsSL https://raw.githubusercontent.com/mcpg-dev/mcpg/main/install.sh | sh -s -- --bin mcpg-config
 ```
 
 or from source, by git reference:
