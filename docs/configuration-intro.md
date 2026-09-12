@@ -231,6 +231,7 @@ plugins:
 | Root | Resolved at | Notes |
 |---|---|---|
 | `env.<NAME>` | Config-load (once) | Process environment. Errors if unset. |
+| `secret.<NAME>` | Config-load, re-read on every reload | File `<gateway.secrets.dir>/<NAME>`, the secrets directory mounted into the gateway. Errors if the directory is unset or the file is unreadable. The secrets watcher reloads the gateway when a file changes. |
 | `arguments.<key>` | Per request | Tool-call arguments. |
 | `identity.<field>` | Per request | `subject_id`, `attributes.<key>`, `roles[N]`, `groups[N]`, … |
 | `cred://<plugin_id>/<target>[#part]` | Per request | Credential plugin lookup. Covers outbound OAuth tokens (`cred://dev.mcpg.credential.oauth-client-credentials/<provider>`), Vault dynamic DB creds (`cred://vault-dynamic-db/orders#username`), and any other registered `credential_issuer` plugin. |
@@ -238,7 +239,7 @@ plugins:
 | `tool_name` | Per request | Current tool's MCP name. |
 | `steps.<id>.output` | Pipeline only | Previous step's result. |
 
-`env.X` is resolved once at config-load — restarts pick up new values. Everything else is per-request, so a token rotation reaches in-flight calls on the next dispatch without a reload.
+`env.X` is resolved once at config-load — restarts pick up new values. `secret.X` is resolved at config-load too, but the gateway watches the directory and reloads itself when a file changes, so a rotated file reaches new calls within one poll interval. Everything else is per-request, so a token rotation reaches in-flight calls on the next dispatch without a reload.
 
 ---
 
