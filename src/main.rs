@@ -19,7 +19,6 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
-mod check;
 mod doc;
 mod explain;
 mod init;
@@ -95,7 +94,7 @@ enum Command {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Init { args } => init::run(args),
-        Command::Check { args } => check::run(args),
+        Command::Check { args } => mcpg::config::check::run(args),
         Command::Doc { args } => doc::run(args),
         Command::Explain { args } => explain::run(args),
         Command::Schema { args } => schema::run(args),
