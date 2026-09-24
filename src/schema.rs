@@ -53,9 +53,63 @@ fn sort_keys(value: serde_json::Value) -> serde_json::Value {
     }
 }
 
+/// The `AppConfig` schema every subcommand renders from.
+///
+/// Draft-07 keeps `definitions` and the shape the doc and explain renderers
+/// read (schemars' default moved to 2020-12). Descriptions come from `///`
+/// comments with their source line breaks; a summary is one paragraph, so
+/// the breaks inside a paragraph become spaces and only blank lines remain.
+pub fn app_config_schema() -> Result<serde_json::Value, serde_json::Error> {
+    let schema = schemars::generate::SchemaSettings::draft07()
+        .into_generator()
+        .into_root_schema_for::<mcpg::config::AppConfig>();
+    let mut value = serde_json::to_value(&schema)?;
+    join_description_lines(&mut value);
+    Ok(value)
+}
+
+/// The string literal a schema node names: `const: "x"`, or the first entry
+/// of its `enum`. A variant carrying a whole `enum` list is named by its
+/// first value, which is what the reference has always shown for it.
+pub fn first_literal(node: &serde_json::Value) -> Option<&str> {
+    node.get("const").and_then(|v| v.as_str()).or_else(|| {
+        node.get("enum")
+            .and_then(|v| v.as_array())
+            .and_then(|a| a.first())
+            .and_then(|v| v.as_str())
+    })
+}
+
+fn join_description_lines(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            for (key, v) in map.iter_mut() {
+                if key == "description"
+                    && let serde_json::Value::String(text) = v
+                {
+                    *text = text
+                        .split("\n\n")
+                        .map(|paragraph| {
+                            paragraph
+                                .lines()
+                                .map(str::trim)
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n\n");
+                } else {
+                    join_description_lines(v);
+                }
+            }
+        }
+        serde_json::Value::Array(items) => items.iter_mut().for_each(join_description_lines),
+        _ => {}
+    }
+}
+
 pub fn run(_args: Vec<String>) -> ExitCode {
-    let schema = schemars::schema_for!(mcpg::config::AppConfig);
-    let value = match serde_json::to_value(&schema) {
+    let value = match app_config_schema() {
         Ok(v) => sort_keys(v),
         Err(e) => {
             eprintln!("error: failed to convert schema to value: {e}");

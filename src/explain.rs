@@ -30,6 +30,8 @@ use std::process::ExitCode;
 
 use serde_json::Value;
 
+use crate::schema::first_literal;
+
 const USAGE: &str = "\
 mcpg config explain — describe a config field by its dotted path
 
@@ -57,8 +59,7 @@ pub fn run(args: Vec<String>) -> ExitCode {
         }
     };
 
-    let schema = serde_json::to_value(schemars::schema_for!(mcpg::config::AppConfig))
-        .expect("schema serializes");
+    let schema = crate::schema::app_config_schema().expect("schema serializes");
 
     match path {
         None => {
@@ -260,11 +261,10 @@ fn type_of(node: &Value, root: &Value) -> String {
         return types.join(" | ");
     }
     if let Some(arr) = node.get("oneOf").and_then(|v| v.as_array()) {
-        // String-only enum with per-variant docs (schemars 0.8 shape):
-        // every entry is `{type: "string", enum: [literal]}`.
+        // String-only enum with per-variant docs: every entry is one string
+        // literal.
         let all_string_enums = arr.iter().all(|v| {
-            v.get("type").and_then(|t| t.as_str()) == Some("string")
-                && v.get("enum").and_then(|e| e.as_array()).map(|a| a.len()) == Some(1)
+            v.get("type").and_then(|t| t.as_str()) == Some("string") && first_literal(v).is_some()
         });
         if all_string_enums && !arr.is_empty() {
             return "string (enum)".to_owned();
@@ -319,17 +319,11 @@ fn enum_values(node: &Value) -> Option<Vec<String>> {
                 .collect(),
         );
     }
-    // schemars 0.8 emits per-variant docs as oneOf with each entry's
-    // own `enum: [literal]`. Aggregate them.
+    // Per-variant docs come as oneOf with one literal per entry. Aggregate them.
     if let Some(arr) = node.get("oneOf").and_then(|v| v.as_array()) {
         let mut values = Vec::new();
         for entry in arr {
-            if let Some(lit) = entry
-                .get("enum")
-                .and_then(|v| v.as_array())
-                .and_then(|a| a.first())
-                .and_then(|v| v.as_str())
-            {
+            if let Some(lit) = first_literal(entry) {
                 values.push(lit.to_owned());
             }
         }

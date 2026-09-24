@@ -14,6 +14,8 @@ use std::process::ExitCode;
 
 use serde_json::Value;
 
+use crate::schema::first_literal;
+
 /// Audience-curated walk-through prepended to the alphabetical reference.
 /// Three sections in operator-priority order: Quick start (the 20% that
 /// solves 80% of cases), Production hardening (compliance + multi-replica),
@@ -26,8 +28,7 @@ use serde_json::Value;
 const CURATED_INTRO: &str = include_str!("../docs/configuration-intro.md");
 
 pub fn run(_args: Vec<String>) -> ExitCode {
-    let schema = serde_json::to_value(schemars::schema_for!(mcpg::config::AppConfig))
-        .expect("schema serializes");
+    let schema = crate::schema::app_config_schema().expect("schema serializes");
     let mut out = String::new();
     render(&schema, &mut out);
     // Exactly one trailing newline: gen-config-reference.sh captures this
@@ -154,23 +155,14 @@ fn render_variant(variant: &Value, defs: &serde_json::Map<String, Value>, out: &
         .get("title")
         .and_then(|v| v.as_str())
         .or_else(|| {
-            // Tagged unions have a `properties.type` field with a single `enum` value
+            // Tagged unions carry the tag as `properties.type`, a single literal.
             variant
                 .get("properties")
                 .and_then(|p| p.get("type"))
-                .and_then(|t| t.get("enum"))
-                .and_then(|e| e.as_array())
-                .and_then(|a| a.first())
-                .and_then(|v| v.as_str())
+                .and_then(first_literal)
         })
-        .or_else(|| {
-            // String-only enum with per-variant docs: `{type: "string", enum: ["fail_closed"]}`
-            variant
-                .get("enum")
-                .and_then(|v| v.as_array())
-                .and_then(|a| a.first())
-                .and_then(|v| v.as_str())
-        })
+        // String-only enum with per-variant docs: one literal per entry.
+        .or_else(|| first_literal(variant))
         .unwrap_or("(unnamed variant)");
     let desc = first_line(
         variant
