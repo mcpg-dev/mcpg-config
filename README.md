@@ -27,10 +27,12 @@ Installed next to the `mcpg` binary it is also reachable as `mcpg config
 curl -fsSL https://raw.githubusercontent.com/mcpg-dev/mcpg/main/install.sh | sh -s -- --bin mcpg-config
 ```
 
-or from source, by git reference:
+or with `mcpg` and the rest of the suite in the
+`model-context-protocol-gateway` package, or from this repository's source:
 
 ```sh
-cargo install mcpg-config --git https://github.com/mcpg-dev/mcpg-config --tag <release-tag>
+npm install -g model-context-protocol-gateway   # or: pipx install / cargo install model-context-protocol-gateway
+cargo install --git https://github.com/mcpg-dev/mcpg-config --tag <release-tag>
 ```
 
 Release tags, signed artifacts, and checksums are on this repository's
