@@ -148,19 +148,20 @@ MCPG has no top-level `tenants:` block by design. Per-tenant differentiation com
 
 1. **Tenant identity.** Comes off the verified principal — `identity.subject_id`, `identity.attributes.<claim>`, `identity.roles[]`, `identity.groups[]`. Whichever OIDC claim represents your tenant (commonly `tid`, `org_id`, or a custom claim) ends up under `identity.attributes.<claim>` once the inbound JWT verifier resolves it. No config knob is needed for the tenant ID itself.
 
-2. **Per-tenant binding allowlist.** Goes through `governance.policy.tool_access.rules[].cel_allow_if`. Each binding gets a CEL predicate that references the principal's tenant claim:
+2. **Per-tenant binding allowlist.** A CEL predicate references the principal's tenant claim. A `governance.policy.tool_access.rules[]` entry names one exact tool, never a pattern, so a whole name prefix is matched in the global `cel_allow_if`, which runs for every call and every list entry (a single binding can instead carry its own `governance.allow_if`):
 
    ```yaml
    governance:
      policy:
        tool_access:
          default_minimum_trust: verified
-         rules:
-           - tool_name: "acme.*"
-             cel_allow_if: 'identity.attributes.tenant == "acme" || "platform" in identity.groups'
-           - tool_name: "partner.*"
-             cel_allow_if: 'identity.attributes.tenant == "partner"'
-           # shared.* falls through to default_minimum_trust (any verified caller).
+         cel_allow_if: >-
+           (!tool_name.startsWith("acme.")
+             || ("tenant" in identity.attributes && identity.attributes["tenant"] == "acme")
+             || "platform" in identity.groups)
+           && (!tool_name.startsWith("partner.")
+             || ("tenant" in identity.attributes && identity.attributes["tenant"] == "partner"))
+         # shared.* passes both clauses: any verified caller may use it.
    ```
 
    The CEL predicate runs pre-dispatch alongside trust-floor checks, so a deny is observable through the same audit shape (`mcpg.policy.tool_call.denied`) as any other policy denial.
