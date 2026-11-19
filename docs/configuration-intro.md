@@ -110,7 +110,7 @@ Goal: external traffic, OIDC, audit you can ship to compliance, multi-replica be
 |---|---|---|
 | `gateway.server.tls` | Listener TLS — drop if your LB terminates TLS instead. | [`TlsConfig`](#tlsconfig) |
 | `gateway.server.allowed_origins` | Browser CORS allowlist. Wildcards are rejected. | [`ServerConfig`](#serverconfig) |
-| `gateway.server.max_sessions_per_tenant` | Per-tenant session quota. 0 = unlimited; tighten for SaaS deploys. | [`ServerConfig`](#serverconfig) |
+| `gateway.server.max_sessions_per_tenant` | Per-principal cap on the session rows that hold listen streams, tasks and paused calls. 0 = unlimited; tighten for SaaS deploys. | [`ServerConfig`](#serverconfig) |
 | `cluster` | Coordinator (KV + pub/sub). `single_node` for single-replica, `redis` / `nats` for multi-replica. | [`ClusterConfig`](#clusterconfig) |
 | `governance.access.oidc_oauth` | Inbound OIDC — verifies Bearer tokens against your IdP's JWKS. | [`OidcOAuthConfig`](#oidcoauthconfig) |
 | `governance.access.jwks` | Static JWKS variant for air-gapped deploys (no IdP discovery call). | [`JwksConfig`](#jwksconfig) |
@@ -182,7 +182,7 @@ MCPG has no top-level `tenants:` block by design. Per-tenant differentiation com
 
    Per-binding rate-limit references go through the backend's own per-use slot (point-of-use wiring) — same shape as any other plugin reference.
 
-The pre-existing `gateway.server.max_sessions_per_tenant` knob is the one *gateway-resident* tenant-aware quota; it's enforced inside the session store (per-tenant cap on concurrent sessions) and works regardless of which CEL gate let the request through.
+The `gateway.server.max_sessions_per_tenant` knob is the one *gateway-resident* tenant-aware quota; it's enforced inside the session store (a per-principal cap on concurrent session rows; derived and anonymous rows count across the fleet, a row only one replica uses counts on that replica) and works regardless of which CEL gate let the request through.
 
 A first-class `tenants:` block that desugars into the above is a possible future addition. Until the recipes turn out painful in operator hands, the existing primitives stay the source of truth — adding a parallel mechanism would split tenant config across two places.
 
